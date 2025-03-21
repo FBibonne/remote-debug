@@ -14,12 +14,13 @@ pour comprendre ce qui ne va pas et modifier le code en conséquence :
 
 L'exécution en debug d'une application est bien connu sur le poste du développeur pour exécuter le code pas à pas et comprendre
 ce qui ne va pas quand les autres outils n'ont pas permis de fournir une explication. Ceci dit, cela arrive parfois avec
-java, l'application ne se comporte pas de la même manière sur tous les environnements, toutes choses égales par ailleurs. Ca 
-a par exemple été le cas avec l'encodage par défaut jusqu'en java 18(JEP 400). On peut donc se retrouver à chercher la cause
+java, l'application ne se comporte pas de la même manière sur tous les environnements, toutes choses égales par ailleurs. Ça 
+a par exemple été [le cas avec l'encodage par défaut jusqu'en java 18](https://openjdk.org/jeps/400). On peut donc se retrouver à chercher la cause
 d'un dysfonctionnement qui ne produit que sur un environnement distant donné : comment alors exécuter en debug (pas à pas)
 depui l'IDE sur notre poste l'application qui tourne sur une JVM sur un serveur distant ?
 
 Ce qui se résume par le schéma suivant :
+
 ```mermaid
 graph LR
     subgraph "Poste de travail développeur" 
@@ -50,10 +51,20 @@ Si en revanche, comme dans beaucoup d'entreprises, seuls certains ports (déjà 
 à distance ne fonctionnera pas directement et il sera nécessaire de passer par un tunnel SSH pour les communications entre le 
 débogueur et la JVM distante. C'est l'objet de ce qui suit.
 
+## Architecture avec le tunnel SSH
+
+Ici c'est [un tunnel SSH avec redirection de port local](https://blog.stephane-robert.info/docs/admin-serveurs/linux/ssh-tunneling/#redirection-de-port-local) qui sera utilisé.
+Ce tunnel permettra d'encapsuler le traffic réseau TCP entre le débogueur de l'IDE et la JVM distante au sein des communications SSH entre les deux machines (puisqu'ici on
+suppose qu'elles sont premises). En pratique, le port sur lequel la JVM écoute les instructions du débogueur apparaîtra comme un port
+local de la machine et sera utilisé en tant que tel par le débogueur de l'IDE
+
 ## Mise en œuvre sur un exemple
 
 Dans l'exemple qui suit, l'utilisateur `fabrice` souhaite déboguer à distance depuis son IDE IntelliJ une [application java](#application-test) qui
-tourne sur une machine distante identifiée par son IP `192.168.0.82`
+tourne sur une machine distante identifiée par son IP `192.168.0.82`. La JVM écoutera les instructions du débogueur sur le port 5005 qui sera
+"relié par le tunnel SSH" au port 50005 de la machine locale.
+
+![Archi debogueur avec tunnel SSH](./doc/debogueurTunnelSSH.png)
 
 ### Prérequis
 
@@ -136,7 +147,17 @@ en reprenant l'exécution, le programme quitte la boucle et la réponse http est
 
 ### Déploiement de l'application sur le serveur distant
 
+L'application sera exécutée en tant que _fat jar_ exécutable : ce jar est produit automatiquement par maven ou gradle lors du build de l'exécution de
+la phase _package_ (resp. la tâche _bootJar_). C'est ce jar qui doit être déposé sur la VM distante `192.168.0.82` pour y être exécuté.
+
 ### Création de la "configuration de débogage dans IntelliJ"
+
+Du point de vue du débogueur Intellij, l'application distante sera sur localhost et écoutera les instructions du débogueur
+sur le port 50005 : l'exécution "Remote JVM Debug" devra être configurée en tant que tel.
+
+- Dans Intellij, ouvrir la fenêtre avec les configuration d'exécution (Menu -> Run -> Edit configurations ...)
+- Créer une nouvelle configuration de type _Remote JVM Debug_
+- 
 
 ### Lancement de l'application sur le serveur distant
 
