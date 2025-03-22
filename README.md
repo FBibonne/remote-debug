@@ -8,7 +8,7 @@ Lorsqu'une application dysfonctionne (erreur explicite ou résultat inattendu), 
 pour comprendre ce qui ne va pas et modifier le code en conséquence :
 - lire les logs
 - exécuter /écrire des tests spécifiques
-- consulter des rapports d'observabilité
+- consulter des rapports d'observabilité ou effectuer un enregistrement [_JDK Flight Recorder_](https://dev.java/learn/jvm/jfr/intro/)
 - regarder les données en base, dans les fichiers, ...
 - exécuter en debug
 
@@ -73,61 +73,8 @@ tourne sur une machine distante identifiée par son IP `192.168.0.82`. La JVM é
 
 ### Application test
 
-L'application Test est une simple application java web qui s'appuie sur Spring Boot et qui tient une classe :
-
-```java
-@SpringBootApplication
-public class RemoteDebugApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(RemoteDebugApplication.class, args);
-	}
-
-	@Controller
-    record DebugedController(SimpleAsyncTaskExecutor executor) {
-
-		public DebugedController() {
-			this(new SimpleAsyncTaskExecutor());
-			executor.setVirtualThreads(true);
-		}
-
-		@GetMapping("/test")
-		ResponseBodyEmitter test(){
-			ResponseBodyEmitter emitter = new ResponseBodyEmitter();
-			executor.execute(new RunnableEmmiter(emitter));
-			return emitter;
-		}
-	}
-
-	static class RunnableEmmiter implements Runnable{
-
-		public static final Duration PAUSE_TIME = Duration.ofMillis(50);
-		private final ResponseBodyEmitter emitter;
-		private boolean stop = false;
-
-        RunnableEmmiter(ResponseBodyEmitter emitter) {
-            this.emitter = emitter;
-        }
-
-        @Override
-		public void run() {
-			while (!stop) {
-                try {
-                    emitter.send(LocalDateTime.now());
-                    emitter.send("\n");
-                    Thread.sleep(PAUSE_TIME);
-                } catch (InterruptedException | IOException e) {
-                    stop = true;
-                }
-            }
-			emitter.complete();
-		}
-	}
-}
-```
-
-L'application hérite du pom parent de Spring Boot (`org.springframework.boot:spring-boot-starter-parent`) et contient une unique dépendance sur 
-`org.springframework.boot:spring-boot-starter-web`.
+L'application Test est une simple application java web qui s'appuie sur Spring Boot qui tient en [une classe](./src/main/java/experimentation/remotedebug/RemoteDebugApplication.java)
+et en [une dépendance](./pom.xml).
 
 Elle expose un seul endpoint `GET /test` accessible par tous et qui sert indéfiniment des timestamps au client jusqu'à ce que l'application soit
 arrêté ou que le processus soit interrompu (permet de vérifier qu'on arrive bien à modifier la valeur du bouléen par le débogueur à distance).
@@ -152,36 +99,74 @@ la phase _package_ (resp. la tâche _bootJar_). C'est ce jar qui doit être dép
 
 ### Création de la "configuration de débogage dans IntelliJ"
 
-Du point de vue du débogueur Intellij, l'application distante sera sur localhost et écoutera les instructions du débogueur
-sur le port 50005 : l'exécution "Remote JVM Debug" devra être configurée en tant que tel.
-
-- Dans Intellij, ouvrir la fenêtre avec les configuration d'exécution (Menu -> Run -> Edit configurations ...)
+Du point de vue du débogueur Intellij, l'application distante sera exécutée sur `localhost` et la JVM écoutera les instructions du débogueur
+sur le port 50005. On configure l'exécution "Remote JVM Debug" à cet effet :
+- Dans Intellij, ouvrir la fenêtre avec les configurations d'exécution (Menu -> Run -> Edit configurations ...)
 - Créer une nouvelle configuration de type _Remote JVM Debug_
-- 
+- Remplir les champs comme suit :
+  - Transport : `Socket`
+  - Debugger mode : `Attach to remote VM`
+  - Host : `localhost`
+  - Port : `50005`
+- Copier le contenu du champ `Command line argmuent for remote JVM` pour l'ajouter à la commande de lancement de l'application
+**après modifications** : il sera de la forme`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:50005`
+il faudra remplacer le numéro du port à la fin par 5005.
 
 ### Lancement de l'application sur le serveur distant
 
+Lancer l'application java test sur la machine distante en ajoutant l'option de débogage à la ligne de commande 
+**avec le numéro de port 50005 remplacé par 5005** :
+
+```shell
+java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar /path/to/remote-debug.jar
+```
+
 ### Création du tunnel SSH
+
+La création d'[un tunnel SSH avec redirection de port local](https://blog.stephane-robert.info/docs/admin-serveurs/linux/ssh-tunneling/#redirection-de-port-local)
+entre le port 5005 de la machine distante et le port 50005 du poste de travail se fait en lancant la commande suivante sur le poste de travail :
+
+```shell
+ssh -L 50005:127.0.0.1:5005 fabrice@192.168.0.82
+```
+
+Une session SSH s'ouvre et le tunnel est créé. La session SSH peut être utilisée et fermée indépendamment du tunnel qui 
+restera ouvert tant qu'il y aura des échanges.
 
 ### Lancement du débogueur dans Intellij
 
+Lancer la configuration de débogage créée précédemment dans IntelliJ en  la sélectionnant parmi les configurations d'exécution et
+en cliquent sur ![l'icône en forme d'insecte](./doc/bug.png) :
+L'IDE se connecte à la JVM distante et la vue de débogage se met en place :
+![Vue débogage en local](./doc/debug1.png)
+
+On note que dans la vue de débogage, il est inscrit `Connected to the target VM, address: 'localhost:50005', transport: 'socket'`
+
 ### Ca marche !
 
-### Arrêter dans l'ordre
+- Vérifier que le point d'arrêt posé à la ligne 51 est toujours présent
+- Effectuer une requête `GET http://localhost:8080/test` avec un client type curl
+- l'exécution de l'application distance s'arrête au point d'arrêt et les informations de débogage s'affichent
+- On peut faire du pas à pas comme dans [le cas local](#vérification-en-local)
+- Modifier la valeur du bouléen `stop` à `true` (clic droit -> _Set value..._ ou F2) et reprendre l'exécution : l'application sort de la boucle et la réponse http est clôturée :
+![bouléen stop à true](./doc/debug3.png)
+- A l'issue de la session de debogage :
+  1. Arrêter le débogueur dans l'IDE en le déconnectant (fermer l'onglet avec la débogage en cours dans la vue de débogage)
+  2. Fermer la session ssh si elle est toujours ouverte (`exit`)
+  3. Si nécesaire, arrêter l'application distante
 
 ## Précautions
+
+- Les échanges entre le débogueur et la JVM distante se font en clair : sans l'utilisation d'un tunnel SSH, des informations confidentielles
+peuvent transiter en clair : le tunnel SSH permet de remédier à cela.
+- [Quelques bonnes pratiques pour sécuriser un tunnel SSH](https://blog.stephane-robert.info/docs/admin-serveurs/linux/ssh-tunneling/#sécurité-et-bonnes-pratiques)
 
 ## Sur kubernetes
 
 Si l'application est déployée dans un cluster kubernetes, on utilisera le [_port forwarding_](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#port-forward) 
 plutôt que le _tunneling SSH_.
-Si l'outil [telepresence](https://www.getambassador.io/products/telepresence) est présent sur le cluster,
-[Intellij s'intègre aussi avec](https://www.jetbrains.com/help/idea/telepresence.html).
-
-## Alternatives au débogage distant
-
-- Utiliser un enregistrement [_JDK Flight Recorder_](https://dev.java/learn/jvm/jfr/intro/) pour observer ce qui se passe 
-sur une JVM distante (il n'est pas nécessaire de la redémarrer). 
+Si l'outil [telepresence](https://www.getambassador.io/products/telepresence) est présent sur le cluster, [Intellij s'intègre aussi avec](https://www.jetbrains.com/help/idea/telepresence.html) : je n'ai jamais
+essayé, je n'ai donc aucune idée de la façon dont ça fonctionne.
 
 ## Références
 
