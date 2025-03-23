@@ -43,7 +43,7 @@ La communication entre le Debogueur dans l'IDE et la JVM distante qui héberge l
 TCP. Le port d'écoute de la JVM est paramétrable dans la commande de lancement de l'application (cf. plus bas). Le port utilisé 
 par le débogueur de l'IDE est choisi aléatoirement pas ce dernier.
 
-Si le débogueur de votre IDE arrive directement à joindre la VM distant sur le port paramétré (en suivant le tutoriel jetBrains
+Si le débogueur de l'IDE arrive directement à joindre la VM distant sur le port paramétré (en suivant le tutoriel jetBrains
 figurant dans [les références ci-dessous](#références)), c'est que les ports nécessaires sont ouverts et il n'est pas nécessaire 
 de suivre plus loin ce tutoriel, sauf si le contexte réseau n'est pas sûr (cf. [Précautions](#précautions)).
 
@@ -104,10 +104,10 @@ sur le port 50005. On configure l'exécution "Remote JVM Debug" à cet effet :
 - Dans Intellij, ouvrir la fenêtre avec les configurations d'exécution (Menu -> Run -> Edit configurations ...)
 - Créer une nouvelle configuration de type _Remote JVM Debug_
 - Remplir les champs comme suit :
-  - Transport : `Socket`
   - Debugger mode : `Attach to remote VM`
   - Host : `localhost`
   - Port : `50005`
+  - si le champ "Transport" est présent : renseigner la valeur `Socket`
 - Copier le contenu du champ `Command line argmuent for remote JVM` pour l'ajouter à la commande de lancement de l'application
 **après modifications** : il sera de la forme`-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:50005`
 il faudra remplacer le numéro du port à la fin par 5005.
@@ -147,7 +147,7 @@ On note que dans la vue de débogage, il est inscrit `Connected to the target VM
 - Vérifier que le point d'arrêt posé à la ligne 51 est toujours présent
 - Effectuer une requête `GET http://localhost:8080/test` avec un client type curl
 - l'exécution de l'application distance s'arrête au point d'arrêt et les informations de débogage s'affichent
-- On peut faire du pas à pas comme dans [le cas local](#vérification-en-local)
+- On peut faire du pas à pas et observer les timestamp envoyés progressivement par le serveur comme dans [le cas local](#vérification-en-local)
 - Modifier la valeur du bouléen `stop` à `true` (clic droit -> _Set value..._ ou F2) et reprendre l'exécution : l'application sort de la boucle et la réponse http est clôturée :
 ![bouléen stop à true](./doc/debug3.png)
 - A l'issue de la session de debogage :
@@ -157,7 +157,7 @@ On note que dans la vue de débogage, il est inscrit `Connected to the target VM
 
 ## Précautions
 
-- Les échanges entre le débogueur et la JVM distante se font en clair : sans l'utilisation d'un tunnel SSH, des informations confidentielles
+- Les échanges réseau entre le débogueur et la JVM distante se font en clair : sans l'utilisation d'un tunnel SSH, des informations confidentielles
 peuvent transiter en clair : le tunnel SSH permet de remédier à cela.
 - [Quelques bonnes pratiques pour sécuriser un tunnel SSH](https://blog.stephane-robert.info/docs/admin-serveurs/linux/ssh-tunneling/#sécurité-et-bonnes-pratiques)
 
