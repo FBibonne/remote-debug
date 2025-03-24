@@ -73,8 +73,60 @@ tourne sur une machine distante identifiée par son IP `192.168.0.82`. La JVM é
 
 ### Application test
 
-L'application Test est une simple application java web qui s'appuie sur Spring Boot qui tient en [une classe](./src/main/java/experimentation/remotedebug/RemoteDebugApplication.java)
-et en [une dépendance](./pom.xml).
+L'application Test est une simple application java web qui s'appuie sur Spring Boot et qui tient une classe :
+
+```java
+@SpringBootApplication
+public class RemoteDebugApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(RemoteDebugApplication.class, args);
+	}
+
+	@Controller
+    record DebugedController(SimpleAsyncTaskExecutor executor) {
+
+		public DebugedController() {
+			this(new SimpleAsyncTaskExecutor());
+			executor.setVirtualThreads(true);
+		}
+
+		@GetMapping("/test")
+		ResponseBodyEmitter test(){
+			ResponseBodyEmitter emitter = new ResponseBodyEmitter();
+			executor.execute(new RunnableEmmiter(emitter));
+			return emitter;
+		}
+	}
+
+	static class RunnableEmmiter implements Runnable{
+
+		public static final Duration PAUSE_TIME = Duration.ofMillis(50);
+		private final ResponseBodyEmitter emitter;
+		private boolean stop = false;
+
+        RunnableEmmiter(ResponseBodyEmitter emitter) {
+            this.emitter = emitter;
+        }
+
+        @Override
+		public void run() {
+			while (!stop) {
+                try {
+					emitter.send(LocalDateTime.now());
+					emitter.send("\n");
+                    Thread.sleep(PAUSE_TIME);
+                } catch (InterruptedException | IOException e) {
+                    stop = true;
+                }
+            }
+			emitter.complete();
+		}
+	}
+}
+```
+
+L'application hérite du pom parent de Spring Boot (`org.springframework.boot:spring-boot-starter-parent`) et contient une unique dépendance sur `org.springframework.boot:spring-boot-starter-web`.
 
 Elle expose un seul endpoint `GET /test` accessible par tous et qui sert indéfiniment des timestamps au client jusqu'à ce que l'application soit
 arrêté ou que le processus soit interrompu (permet de vérifier qu'on arrive bien à modifier la valeur du bouléen par le débogueur à distance).
