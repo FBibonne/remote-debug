@@ -1,3 +1,7 @@
+---
+title: Test
+---
+
 # Débogage d'une JVM distante avec IntelliJ via un tunnel SSH
 
 Ce billet présente une experimentation d'exécution en debug (pas à pas) d'une application java tournant sur un serveur distante à l'aide d'un tunnel SSH.
