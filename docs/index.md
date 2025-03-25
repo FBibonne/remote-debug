@@ -1,10 +1,8 @@
 ---
-title: "Remote debug"
+title: "Débogage d'une JVM distante avec IntelliJ via un tunnel SSH"
 ---
 
-# Débogage d'une JVM distante avec IntelliJ _via_ un tunnel SSH
-
-Ce billet présente une experimentation d'exécution en debug d'une application java tournant sur une VM distante à l'aide d'un tunnel SSH.
+Ce billet présente une experimentation d'exécution en debug (pas à pas) d'une application java tournant sur un serveur distante à l'aide d'un tunnel SSH.
 
 ## _<<Débogage d'une JVM distante>>_ : de quoi parle-t-on ?
 
@@ -14,16 +12,12 @@ pour comprendre ce qui ne va pas et modifier le code en conséquence :
 - exécuter /écrire des tests spécifiques
 - consulter des rapports d'observabilité ou effectuer un enregistrement [_JDK Flight Recorder_](https://dev.java/learn/jvm/jfr/intro/)
 - regarder les données en base, dans les fichiers, ...
-- exécuter en debug
+- exécuter en debug (pas à pas)
 
-L'exécution en debug d'une application est bien connu sur le poste du développeur pour exécuter le code pas à pas et comprendre
-ce qui ne va pas quand les autres outils n'ont pas permis de fournir une explication. Ceci dit, cela arrive parfois avec
-java, l'application ne se comporte pas de la même manière sur tous les environnements, toutes choses égales par ailleurs. Ça 
-a par exemple été [le cas avec l'encodage par défaut jusqu'en java 18](https://openjdk.org/jeps/400). On peut donc se retrouver à chercher la cause
-d'un dysfonctionnement qui ne produit que sur un environnement distant donné : comment alors exécuter en debug (pas à pas)
-depui l'IDE sur notre poste l'application qui tourne sur une JVM sur un serveur distant ?
-
-Ce qui se résume par le schéma suivant :
+L'utilisation en debug est bien connue sur le poste du développeur pour exécuter le code pas à pas et comprendre
+ce qui ne va pas. Si le problème n'est pas reproductible sur le poste du développeur, étudions ici le moyen de faire 
+cette même exécution pas à pas pour une application déployée sur un serveur distant. Le pas à pas est pilotée depuis l'IDE
+du développeur. Ce qui se résume par le schéma suivant :
 
 ```mermaid
 graph LR
