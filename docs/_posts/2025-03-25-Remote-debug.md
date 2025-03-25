@@ -1,3 +1,8 @@
+layout: post
+title: "Remote debug"
+date: 2025-03-25 07:00:00 -0000
+categories: java
+
 # Débogage d'une JVM distante avec IntelliJ _via_ un tunnel SSH
 
 Ce billet présente une experimentation d'exécution en debug d'une application java tournant sur une VM distante à l'aide d'un tunnel SSH.
@@ -64,7 +69,7 @@ Dans l'exemple qui suit, l'utilisateur `fabrice` souhaite déboguer à distance 
 tourne sur une machine distante identifiée par son IP `192.168.0.82`. La JVM écoutera les instructions du débogueur sur le port 5005 qui sera
 "relié par le tunnel SSH" au port 50005 de la machine locale.
 
-![Archi debogueur avec tunnel SSH](./img/debogueurTunnelSSH.png)
+![Archi debogueur avec tunnel SSH](/img/debogueurTunnelSSH.png)
 
 ### Prérequis
 
@@ -138,7 +143,7 @@ d'arrêt à la ligne 51 sur `emitter.send(LocalDateTime.now());`. Par défaut l'
 des timestamps en appelant `GET http://localhost:8080/test` avec un client type curl. La vue de débogage se met en place et l'exécution se bloque sur
 le point d'arrêt
 
-![Vue débogage en local](./img/debugLocal.png)
+![Vue débogage en local](/img/debugLocal.png)
 
 On vérifie que le pas à pas fonctionne et qu'on tourne infiniment dans la boucle en faisant _Step over_ tandis que côté client on reçoit un nouveau
 timsestamp à chaque itération. On peut vérifier également qu'on modifiant la valeur du bouléen `stop` en la passant à `true` via le débogueur puis
@@ -188,9 +193,9 @@ restera ouvert tant qu'il y aura des échanges.
 ### Lancement du débogueur dans Intellij
 
 Lancer la configuration de débogage créée précédemment dans IntelliJ en  la sélectionnant parmi les configurations d'exécution et
-en cliquent sur ![l'icône en forme d'insecte](./img/bug.png) :
+en cliquent sur ![l'icône en forme d'insecte](/img/bug.png) :
 L'IDE se connecte à la JVM distante et la vue de débogage se met en place :
-![Vue débogage en local](./img/debug1.png)
+![Vue débogage en local](/img/debug1.png)
 
 On note que dans la vue de débogage, il est inscrit `Connected to the target VM, address: 'localhost:50005', transport: 'socket'`
 
@@ -201,7 +206,7 @@ On note que dans la vue de débogage, il est inscrit `Connected to the target VM
 - l'exécution de l'application distance s'arrête au point d'arrêt et les informations de débogage s'affichent
 - On peut faire du pas à pas et observer les timestamp envoyés progressivement par le serveur comme dans [le cas local](#vérification-en-local)
 - Modifier la valeur du bouléen `stop` à `true` (clic droit -> _Set value..._ ou F2) et reprendre l'exécution : l'application sort de la boucle et la réponse http est clôturée :
-![bouléen stop à true](./img/debug3.png)
+![bouléen stop à true](/img/debug3.png)
 - A l'issue de la session de debogage :
   1. Arrêter le débogueur dans l'IDE en le déconnectant (fermer l'onglet avec la débogage en cours dans la vue de débogage)
   2. Fermer la session ssh si elle est toujours ouverte (`exit`)
