@@ -1,4 +1,6 @@
+---
 title: "Remote debug"
+---
 
 # Débogage d'une JVM distante avec IntelliJ _via_ un tunnel SSH
 
