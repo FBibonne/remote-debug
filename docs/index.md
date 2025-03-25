@@ -1,5 +1,5 @@
 ---
-title: DebugRemoteJVMWithIntellij
+title: 'Debug remote JVM with IntelliJ'
 ---
 
 # Débogage d'une JVM distante avec IntelliJ via un tunnel SSH
