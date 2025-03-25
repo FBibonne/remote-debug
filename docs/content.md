@@ -1,7 +1,4 @@
-layout: post
 title: "Remote debug"
-date: 2025-03-25 07:00:00 -0000
-categories: java
 
 # Débogage d'une JVM distante avec IntelliJ _via_ un tunnel SSH
 
